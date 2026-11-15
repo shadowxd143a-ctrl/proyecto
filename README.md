@@ -128,6 +128,7 @@ Autenticación con JWT para la app móvil. Las rutas están documentadas en [doc
 | `DB_CONNECTION` | `sqlite` (por defecto, archivo `instance/dropx.db`) o `mysql` (producción, ej: Aiven). |
 | `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, `DB_NAME` | Solo con `DB_CONNECTION=mysql`: conexión a MySQL (por defecto `localhost`, `3306`, `root`, sin contraseña y `dropx`). |
 | `DB_SSL_CA` | Opcional, solo MySQL. Ruta del certificado `.pem` para servicios en la nube que exigen SSL (ej: Aiven). |
+| `DB_SSL_CA_PEM` | Opcional, solo MySQL. Lo mismo que `DB_SSL_CA`, pero con el **contenido** del certificado en lugar de una ruta. Se usa en Vercel, donde no hay archivos `.pem`. |
 | `JWT_EXPIRES_HOURS` | Duración del token de la API (por defecto, 168 horas = 7 días). |
 | `WHATSAPP_ADVISOR_NUMBER` | Número del asesor para el formulario de contacto. |
 | `SEED_*_NAME`, `SEED_*_PASSWORD` | Nombres y contraseñas de los usuarios que crea `db:seed` (admin, manager y courier). |

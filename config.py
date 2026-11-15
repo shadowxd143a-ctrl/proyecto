@@ -1,4 +1,5 @@
 import os
+import tempfile
 from datetime import timedelta
 from pathlib import Path
 
@@ -31,8 +32,15 @@ class Config:
 
     SQLALCHEMY_DATABASE_URI = DATABASE_URL
 
-    # Certificado SSL (archivo .pem) que exigen algunos servicios en la nube, como Aiven
+    # Certificado SSL (archivo .pem) que exigen algunos servicios en la nube, como Aiven.
+    # En Vercel no hay archivos .pem (están en el .gitignore): se pega el contenido del
+    # certificado en DB_SSL_CA_PEM y se escribe en /tmp, el único lugar donde se puede escribir.
     _ssl_ca = os.getenv('DB_SSL_CA')
+    _ssl_ca_pem = os.getenv('DB_SSL_CA_PEM')
+    if _ssl_ca_pem and not _ssl_ca:
+        _pem_file = Path(tempfile.gettempdir()) / 'dropx-db-ca.pem'
+        _pem_file.write_text(_ssl_ca_pem.replace('\\n', '\n'))  # acepta \n escritos como texto
+        _ssl_ca = str(_pem_file)
     SQLALCHEMY_ENGINE_OPTIONS = {'connect_args': {'ssl': {'ca': _ssl_ca}}} if _ssl_ca and DB_CONNECTION == 'mysql' else {}
 
     # Duración del token JWT de la API (por defecto 168 horas = 7 días, para que

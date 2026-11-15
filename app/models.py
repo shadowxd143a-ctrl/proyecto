@@ -1,7 +1,5 @@
-from pathlib import Path
-
-from flask import current_app
 from flask_login import UserMixin
+from sqlalchemy.dialects.mysql import MEDIUMBLOB
 from werkzeug.security import check_password_hash, generate_password_hash
 
 from app import db, login_manager
@@ -78,6 +76,10 @@ class Package(db.Model):
     # Motivo de la novedad (solo mientras el estado es "issue")
     issue_reason = db.Column(db.String(100))
 
+    # Firma de quien recibe (imagen PNG). Se guarda en la base de datos y no en un archivo,
+    # porque en Vercel el disco es de solo lectura. MEDIUMBLOB en MySQL (hasta 16 MB).
+    signature = db.deferred(db.Column(db.LargeBinary().with_variant(MEDIUMBLOB(), 'mysql')))
+
     # Repartidor asignado (vacío mientras no se asigne)
     courier_id = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='SET NULL'))
 
@@ -94,10 +96,10 @@ class Package(db.Model):
         cascade='all, delete-orphan',  # al borrar el paquete se borra su historial
     )
 
-    # La firma de quien recibe se guarda como imagen en instance/signatures/<id>.png
+    # ¿Ya tiene firma? Consulta solo si existe, sin cargar la imagen completa
     @property
-    def signature_path(self):
-        return Path(current_app.instance_path) / 'signatures' / f'{self.id}.png'
+    def has_signature(self):
+        return db.session.query(Package.id).filter(Package.id == self.id, Package.signature.is_not(None)).first() is not None
 
     @property
     def status_label(self):

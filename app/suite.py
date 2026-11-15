@@ -318,9 +318,9 @@ def nuevo_paquete():
 @login_required
 def firma(package_id):
     package = db.get_or_404(Package, package_id)
-    if not package.signature_path.exists():
+    if not package.signature:
         abort(404)
-    return send_file(package.signature_path, mimetype='image/png')
+    return send_file(io.BytesIO(package.signature), mimetype='image/png')
 
 
 @bp.route('/paquetes/<int:package_id>')
@@ -372,7 +372,6 @@ def editar_paquete(package_id):
 def eliminar_paquete(package_id):
     package = db.get_or_404(Package, package_id)
     tracking = package.tracking_number  # se guarda antes, porque luego el objeto ya no existe
-    package.signature_path.unlink(missing_ok=True)  # borra la firma, si tenía
     db.session.delete(package)
     db.session.commit()
     flash(f'Paquete {tracking} eliminado.', 'success')

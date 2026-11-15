@@ -3,7 +3,7 @@ import base64
 
 from app import db
 from app.models import Package
-from tests.conftest import PASSWORD, api_headers
+from tests.conftest import PASSWORD, api_headers, suite_login
 
 # Una firma de mentira: solo necesita empezar con el encabezado de un PNG
 PNG = base64.b64encode(b'\x89PNG\r\n\x1a\n' + b'0' * 20).decode()
@@ -79,13 +79,29 @@ def test_el_motivo_se_limita_a_100_caracteres(client):
 
 
 # ---------- Firma de entrega ----------
-def test_entrega_con_firma_guarda_el_archivo(client, app):
+def test_entrega_con_firma_la_guarda_en_la_base_de_datos(client, app):
     headers = api_headers(client, 'courier@test.com')
     change_status(client, headers, 'picked_up')
     assert change_status(client, headers, 'delivered', signature=PNG).status_code == 200
-    # La firma queda como archivo PNG en instance/signatures/
+    # La firma queda como imagen PNG en la columna packages.signature (no en un archivo)
     with app.app_context():
-        assert db.session.get(Package, 1).signature_path.exists()
+        package = db.session.get(Package, 1)
+        assert package.has_signature
+        assert package.signature == base64.b64decode(PNG)
+
+
+def test_la_suite_muestra_la_firma_guardada(client):
+    headers = api_headers(client, 'courier@test.com')
+    change_status(client, headers, 'picked_up')
+    change_status(client, headers, 'delivered', signature=PNG)
+
+    suite_login(client, 'admin@test.com')
+    response = client.get('/suite/paquetes/1/firma')
+    assert response.status_code == 200
+    assert response.mimetype == 'image/png'
+    assert response.data == base64.b64decode(PNG)
+    # Un paquete sin firma responde 404
+    assert client.get('/suite/paquetes/999/firma').status_code == 404
 
 
 def test_firma_invalida_se_rechaza(client):
