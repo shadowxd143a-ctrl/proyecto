@@ -1,0 +1,94 @@
+{% extends 'suite/base.html' %}
+{% import '_ui.html' as ui %}
+{% from '_macros.html' import status_badge, avatar, icon, page_head, overlay, modal_head with context %}
+{% block title %}Paquetes{% endblock %}
+
+{% block content %}
+{% call page_head('Paquetes', total ~ ' guías registradas') %}
+    <a class="{{ ui.btn }}" href="{{ url_for('suite.nuevo_paquete') }}">{{ icon('i-plus') }}Nuevo paquete</a>
+{% endcall %}
+
+<form method="get" class="{{ ui.card }} mb-4 grid items-end gap-3 sm:grid-cols-2 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)_auto]">
+    <div><label class="{{ ui.label }}" for="f-guia">Número de guía</label><input class="{{ ui.input }}" id="f-guia" name="guia" value="{{ tracking }}" placeholder="Ej. DX-000214"></div>
+    <div><label class="{{ ui.label }}" for="f-estado">Estado</label>
+        <select class="{{ ui.input }}" id="f-estado" name="estado">
+            <option value="">Todos los estados</option>
+            {% for key, label in STATUSES.items() %}<option value="{{ key }}" {{ 'selected' if status == key }}>{{ label }}</option>{% endfor %}
+        </select>
+    </div>
+    <div><label class="{{ ui.label }}" for="f-rango">Periodo</label>
+        <select class="{{ ui.input }}" id="f-rango" name="rango">
+            {% for key, label in [('30', 'Últimos 30 días'), ('7', 'Últimos 7 días'), ('mes', 'Este mes'), ('todo', 'Todo')] %}
+                <option value="{{ key }}" {{ 'selected' if period == key }}>{{ label }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <button class="{{ ui.btn }}">Filtrar</button>
+</form>
+
+<div class="{{ ui.card }}">
+    <div class="overflow-x-auto"><table class="w-full">
+        <thead><tr>
+            <th class="{{ ui.th }}">Guía</th><th class="{{ ui.th }}">Remitente</th><th class="{{ ui.th }}">Destinatario</th><th class="{{ ui.th }}">Estado</th>
+            <th class="{{ ui.th }}">Peso</th><th class="{{ ui.th }}">Fecha</th><th class="{{ ui.th }} text-right!">Acciones</th>
+        </tr></thead>
+        <tbody>
+        {% for p in pagination.items %}
+            <tr>
+                <td class="{{ ui.td }} whitespace-nowrap font-extrabold">{{ p.tracking_number }} {% if p.is_urgent %}<span class="ml-1.5 rounded-full bg-rose px-2 py-0.5 align-middle text-[11px] font-bold text-rose-ink">Urgente</span>{% endif %}</td>
+                <td class="{{ ui.td }}"><div class="flex items-center gap-2.5 whitespace-nowrap">{{ avatar(p.sender_name) }}{{ p.sender_name }}</div></td>
+                <td class="{{ ui.td }}">{{ p.recipient_name }}</td>
+                <td class="{{ ui.td }}">{{ status_badge(p.status) }}</td>
+                <td class="{{ ui.td }} whitespace-nowrap">{{ '%.1f'|format(p.weight) }} kg</td>
+                <td class="{{ ui.td }} whitespace-nowrap">{{ p.created_at|short_date }}</td>
+                <td class="{{ ui.td }}"><div class="flex justify-end gap-1.5">
+                    <button type="button" class="{{ ui.icon_btn }}" data-quick="{{ p.id }}" aria-label="Vista rápida">{{ icon('i-eye') }}</button>
+                    <a class="{{ ui.icon_btn }}" href="{{ url_for('suite.editar_paquete', package_id=p.id) }}" aria-label="Editar">{{ icon('i-edit') }}</a>
+                </div></td>
+            </tr>
+        {% else %}
+            <tr><td colspan="7" class="p-8 text-center text-muted">No hay paquetes con esos filtros.</td></tr>
+        {% endfor %}
+        </tbody>
+    </table></div>
+
+    {# Paginación: los enlaces conservan los filtros #}
+    {% set args = {'guia': tracking, 'estado': status, 'rango': period} %}
+    {% set page_link = 'rounded-xl border border-line bg-white px-3 py-1.5 font-semibold text-ink2 hover:bg-soft' %}
+    {% set page_on = 'rounded-xl border border-accent bg-accent px-3 py-1.5 font-semibold text-white' %}
+    {% set page_off = 'rounded-xl border border-line bg-white px-3 py-1.5 font-semibold text-ink2 opacity-45' %}
+    <div class="mt-4 flex flex-wrap items-center justify-between gap-3 text-muted">
+        <span>Mostrando {{ pagination.items|length }} de {{ pagination.total }} paquetes</span>
+        <div class="flex gap-1.5">
+            {% if pagination.has_prev %}<a class="{{ page_link }}" href="{{ url_for('suite.paquetes', pagina=pagination.prev_num, **args) }}">Anterior</a>{% else %}<span class="{{ page_off }}">Anterior</span>{% endif %}
+            {% for n in pagination.iter_pages(left_edge=1, left_current=1, right_current=1, right_edge=1) %}
+                {% if n %}<a class="{{ page_on if n == pagination.page else page_link }}" href="{{ url_for('suite.paquetes', pagina=n, **args) }}">{{ n }}</a>{% else %}<span class="{{ page_off }}">…</span>{% endif %}
+            {% endfor %}
+            {% if pagination.has_next %}<a class="{{ page_link }}" href="{{ url_for('suite.paquetes', pagina=pagination.next_num, **args) }}">Siguiente</a>{% else %}<span class="{{ page_off }}">Siguiente</span>{% endif %}
+        </div>
+    </div>
+</div>
+
+{# Vista rápida: una sola ventana que suite.js llena con los datos de la fila #}
+{% call overlay('quick', 'max-w-3xl') %}
+    <div class="mb-4 flex items-start justify-between gap-3">
+        <div><h2 id="quick-title" class="text-xl font-extrabold tracking-tight"></h2><div id="q-pills" class="mt-2 flex items-center gap-2"></div></div>
+        <button type="button" data-close class="{{ ui.icon_btn }}" aria-label="Cerrar">{{ icon('i-x') }}</button>
+    </div>
+    <div class="grid gap-3 sm:grid-cols-2">
+        <div class="{{ ui.box }}"><h3 class="{{ ui.card_title }} mb-3!">{{ icon('i-send') }}Remitente</h3><div id="q-from"></div></div>
+        <div class="{{ ui.box }}"><h3 class="{{ ui.card_title }} mb-3!">{{ icon('i-recv') }}Destinatario</h3><div id="q-to"></div></div>
+    </div>
+    <div class="mt-4 grid gap-3 sm:grid-cols-3">
+        <div><span class="block text-xs text-muted">Peso</span><b id="q-w"></b></div>
+        <div><span class="block text-xs text-muted">Distancia</span><b id="q-km"></b></div>
+        <div><span class="block text-xs text-muted">Repartidor</span><b id="q-c"></b></div>
+    </div>
+    <div class="mt-5 flex flex-wrap justify-end gap-2">
+        <button type="button" data-close class="{{ ui.btn_line }}">Cerrar</button>
+        <a id="q-edit" href="#" class="{{ ui.btn_soft }}">Editar</a>
+        <a id="q-detail" href="#" class="{{ ui.btn }}">Ver detalle completo →</a>
+    </div>
+{% endcall %}
+<script id="quick-data" type="application/json">{{ quick | tojson }}</script>
+{% endblock %}

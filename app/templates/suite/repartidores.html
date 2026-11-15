@@ -1,0 +1,52 @@
+{% extends 'suite/base.html' %}
+{% import '_ui.html' as ui %}
+{% from '_macros.html' import avatar, icon, pill, page_head %}
+{% from 'suite/_user_modals.html' import user_modal with context %}
+{% block title %}Repartidores{% endblock %}
+
+{% block content %}
+{% call page_head('Repartidores', couriers|length ~ ' aliados · ' ~ month_total ~ ' entregas este mes') %}
+    <button type="button" class="{{ ui.btn }}" data-open="#newCourier">{{ icon('i-plus') }}Agregar repartidor</button>
+{% endcall %}
+
+<div class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+    {% for c in couriers %}
+        {% set done = deliveries.get(c.id, 0) %}
+        {% set active = on_route.get(c.id, 0) %}
+        <div class="{{ ui.card }} grid gap-4">
+            <div class="flex items-center gap-3">
+                {{ avatar(c.name, 'size-10 text-xs') }}
+                <div class="min-w-0 flex-1"><b class="block truncate">{{ c.name }}</b><small class="block truncate text-muted">{{ c.email }}</small><small class="block text-muted">{{ c.phone or 'Sin teléfono' }}</small></div>
+                {{ pill('En ruta', ui.status_tone.picked_up) if active else pill('Disponible', ui.status_tone.delivered) }}
+            </div>
+            <div class="grid grid-cols-3 gap-2 rounded-2xl bg-soft p-3 text-center">
+                <div><b class="block text-lg">{{ done }}</b><span class="text-xs text-muted">Entregas mes</span></div>
+                <div><b class="block text-lg">{{ active }}</b><span class="text-xs text-muted">En curso</span></div>
+                <div><b class="block text-lg">{{ waiting.get(c.id, 0) }}</b><span class="text-xs text-muted">Pendientes</span></div>
+            </div>
+            <div>
+                <div class="flex justify-between text-xs text-muted"><span>Meta mensual</span><span>{{ done }} / {{ monthly_goal }}</span></div>
+                <div class="mt-1.5 h-1.5 overflow-hidden rounded-full bg-soft"><i class="block h-full rounded-full bg-accent" style="width: {{ [done / monthly_goal * 100, 100]|min }}%"></i></div>
+            </div>
+            <div class="flex justify-end gap-1.5">
+                <button type="button" class="{{ ui.icon_btn }}" aria-label="Editar" data-edit="#editCourier"
+                        data-action="{{ url_for('suite.editar_repartidor', courier_id=c.id) }}"
+                        data-name="{{ c.name }}" data-email="{{ c.email }}" data-phone="{{ c.phone or '' }}">{{ icon('i-edit') }}</button>
+                {# Solo el administrador puede eliminar #}
+                {% if current_user.role == 'admin' %}
+                <form method="post" action="{{ url_for('suite.eliminar_repartidor', courier_id=c.id) }}" onsubmit="return confirm('¿Eliminar a {{ c.name }}?');">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button class="{{ ui.icon_btn_danger }}" aria-label="Eliminar">{{ icon('i-trash') }}</button>
+                </form>
+                {% endif %}
+            </div>
+        </div>
+    {% else %}
+        <div class="{{ ui.card }} p-10 text-center text-muted md:col-span-2 xl:col-span-3">Aún no hay repartidores.</div>
+    {% endfor %}
+</div>
+
+{# Toda la operación es en Cartagena, por eso no hay campo de zona #}
+{{ user_modal('newCourier', 'Agregar repartidor', true) }}
+{{ user_modal('editCourier', 'Editar repartidor', true, false) }}
+{% endblock %}

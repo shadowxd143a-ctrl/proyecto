@@ -1,0 +1,14 @@
+{% extends 'suite/auth_base.html' %}
+{% import '_ui.html' as ui %}
+{% from '_macros.html' import input %}
+{% block title %}Recuperar contraseña{% endblock %}
+
+{% block auth_content %}
+<form method="post" class="{{ ui.card }} grid gap-4 p-6 text-left">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div><h1 class="text-2xl font-extrabold tracking-tight">Recupere su contraseña</h1><p class="mt-1 text-muted">Ingrese su correo y recibirá las instrucciones.</p></div>
+    {{ input('email', 'Correo electrónico', type='email', required=true, extra='autofocus') }}
+    <button class="{{ ui.btn }} w-full">Enviar instrucciones</button>
+    <a class="text-center font-bold text-accent-text hover:underline" href="{{ url_for('suite.login') }}">Volver al inicio de sesión</a>
+</form>
+{% endblock %}

@@ -1,0 +1,24 @@
+{% extends 'suite/auth_base.html' %}
+{% import '_ui.html' as ui %}
+{% from '_macros.html' import input %}
+{% block title %}Iniciar sesión{% endblock %}
+
+{% block auth_content %}
+<form method="post" class="{{ ui.card }} grid gap-4 p-6 text-left">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div><h1 class="text-2xl font-extrabold tracking-tight">Inicie sesión</h1><p class="mt-1 text-muted">Ingrese con su cuenta DropX.</p></div>
+    {{ input('email', 'Correo electrónico', type='email', required=true, extra='autocomplete=username autofocus') }}
+    <div>
+        <label class="{{ ui.label }}" for="password">Contraseña</label>
+        <div class="relative">
+            <input class="{{ ui.input }} pr-20" id="password" name="password" type="password" autocomplete="current-password" required>
+            <button type="button" data-toggle-password="#password" class="absolute right-2 top-1/2 -translate-y-1/2 px-2 py-1 text-sm font-bold text-accent-text">Mostrar</button>
+        </div>
+    </div>
+    <div class="flex flex-wrap items-center justify-between gap-2">
+        <label class="flex items-center gap-2 font-semibold text-ink2"><input type="checkbox" name="remember" value="1" class="size-4 accent-accent"> Recordar sesión</label>
+        <a class="font-bold text-accent-text hover:underline text-sm" href="{{ url_for('suite.recuperar') }}">¿Olvidó su contraseña?</a>
+    </div>
+    <button class="{{ ui.btn }} w-full">Iniciar sesión</button>
+</form>
+{% endblock %}
