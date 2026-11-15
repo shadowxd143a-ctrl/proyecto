@@ -27,3 +27,14 @@ instance/*
 !instance/signatures/
 instance/signatures/*
 !instance/signatures/.gitkeep
+
+# Variables de entorno y producción
+.env
+venv/
+__pycache__/
+
+# Certificados de Aiven y llaves privadas
+*.pem
+*.crt
+*.key
+ca.pem
