@@ -1,10 +1,11 @@
+from flask import render_template
 from app import create_app
 
 app = create_app()
 
 @app.route('/')
 def index():
-    return {"status": "DropX Logística API funcionando correctamente"}, 200
+    return render_template('public/index.html')
 
 if __name__ == "__main__":
     app.run()
